@@ -64,7 +64,7 @@ POST /api/v1/scrape/youtube/play?headless=false
   "status": "OK",
   "success": true,
   "data": {
-    "log_id": "...",
+    "logId": "...",
     "url": "...",
     "action": "CLICK_PLAY",
     "result": "SUCCESS",
@@ -77,7 +77,7 @@ POST /api/v1/scrape/youtube/play?headless=false
 
 | Scenario | HTTP | Body |
 |---|---|---|
-| Missing/invalid JSON | 400 | `{"code":400,"status":"BAD_REQUEST","success":false,"errors":{"url":"..."}}` |
+| Missing/invalid JSON | 400 | `{"code":400,"status":"BAD_REQUEST","success":false,"errors":{"message":"..."}}` |
 | Non-YouTube URL | 400 | Same pattern |
 | Browser launch fail | 500 | `{"code":500,"status":"INTERNAL_SERVER_ERROR","success":false,"errors":{"message":"..."}}` |
 | Navigation timeout (30s) | 500 | Same |
@@ -125,15 +125,15 @@ type ScrapeLog struct {
     Target     string             `bson:"target" json:"target"`       // "YOUTUBE"
     Action     string             `bson:"action" json:"action"`       // "CLICK_PLAY"
     Status     string             `bson:"status" json:"status"`       // "SUCCESS" | "FAILED"
-    HTTPStatus int                `bson:"http_status" json:"http_status"`
+    HTTPStatus int                `bson:"httpStatus" json:"httpStatus"`
     Message    string             `bson:"message" json:"message"`
     Error      *string            `bson:"error,omitempty" json:"error,omitempty"`
-    StartedAt  time.Time          `bson:"started_at" json:"started_at"`
-    FinishedAt time.Time          `bson:"finished_at" json:"finished_at"`
-    DurationMs int64              `bson:"duration_ms" json:"duration_ms"`
-    ProxyUsed  *string            `bson:"proxy_used,omitempty" json:"proxy_used,omitempty"`
+    StartedAt  time.Time          `bson:"startedAt" json:"startedAt"`
+    FinishedAt time.Time          `bson:"finishedAt" json:"finishedAt"`
+    DurationMs int64              `bson:"durationMs" json:"durationMs"`
+    ProxyUsed  *string            `bson:"proxyUsed,omitempty" json:"proxyUsed,omitempty"`
     Headless   bool               `bson:"headless" json:"headless"`
-    CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
+    CreatedAt  time.Time          `bson:"createdAt" json:"createdAt"`
 }
 ```
 
@@ -152,12 +152,17 @@ ROD_ACTION_TIMEOUT_SECONDS=15
 
 All defaults declared in `.env.example`. Config loaded via `godotenv` (falls back to OS env vars).
 
-## Conventions (from AGENTS.md)
+## Conventions (from AGENTS.md + Go community)
 
 - **Always** check errors — no unchecked errcheck violations
 - **Tagged switch** over cascading `if` chains (QF1003)
 - **Ponytail**: minimal scaffolding, flat package, one method per concern, standard library where possible
 - **Caveman**: chat prose only, never code or docs
+- **JSON keys**: `camelCase` (e.g., `logId`, `httpStatus`, `startedAt`)
+- **BSON keys**: `camelCase` (matches JSON keys)
+- **Database & collection names**: `snake_case` (e.g., `scraping_service`, `scrape_logs`)
+- **URLs/endpoints**: `kebab-case` (e.g., `/api/v1/scrape/youtube/play`)
+- **Go fields**: exported `PascalCase`
 
 ## Dependencies
 

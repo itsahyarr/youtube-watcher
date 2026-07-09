@@ -30,6 +30,16 @@ Note: `.context7/` is gitignored — local cache only, not shared across the tea
 - **always** avoid error is not checked / unchecked errcheck
 - **always** use tagged switch instead of `if` (QF1003) if possible
 
+## JSON request/response
+
+- **style** : camelCase
+
+## MongoDB
+
+- **database name** : snake_case
+- **collection name** : snake_case
+- **document key** : camelCase
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
