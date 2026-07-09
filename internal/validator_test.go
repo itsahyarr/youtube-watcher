@@ -22,3 +22,24 @@ func TestIsValidYouTubeURL(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateProxy(t *testing.T) {
+	tests := []struct {
+		name    string
+		proxy   string
+		wantErr bool
+	}{
+		{"empty", "", false},
+		{"invalid scheme", "ftp://proxy:8080", true},
+		{"no host", "http://", true},
+		{"garbage", "not-a-url!!!", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateProxy(tt.proxy)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateProxy(%q) error=%v, wantErr=%v", tt.proxy, err, tt.wantErr)
+			}
+		})
+	}
+}

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -64,6 +65,17 @@ func (h *Handler) ScrapeYouTube(c *gin.Context) {
 	proxyURL := ""
 	if req.Proxy != nil {
 		proxyURL = *req.Proxy
+		if err := ValidateProxy(proxyURL); err != nil {
+			c.JSON(http.StatusBadRequest, ErrorResponse{
+				Code:    400,
+				Status:  "BAD_REQUEST",
+				Success: false,
+				Errors: map[string]interface{}{
+					"message": fmt.Sprintf("invalid proxy: %v", err),
+				},
+			})
+			return
+		}
 	}
 
 	logEntry, err := h.svc.ExecuteScrape(c.Request.Context(), req.URL, proxyURL, headless)
