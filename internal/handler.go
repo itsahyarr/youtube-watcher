@@ -92,12 +92,16 @@ func (h *Handler) ScrapeYouTube(c *gin.Context) {
 	}
 
 	if logEntry.Status != "SUCCESS" {
+		errMsg := logEntry.Message
+		if logEntry.Error != nil {
+			errMsg = *logEntry.Error
+		}
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Code:    500,
 			Status:  "INTERNAL_SERVER_ERROR",
 			Success: false,
 			Errors: map[string]interface{}{
-				"message": logEntry.Message,
+				"message": errMsg,
 			},
 		})
 		return

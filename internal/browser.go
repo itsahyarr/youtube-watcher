@@ -4,12 +4,24 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
+	"github.com/go-rod/stealth"
 )
+
+// ponytail: a realistic desktop Chrome UA/headers combo; YouTube's bot check
+// weighs an "automated" fingerprint (navigator.webdriver, missing UA, etc.)
+// heavily on top of IP reputation, so we mask both.
+const desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
+func isContextDestroyedErr(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "context was destroyed")
+}
 
 type ScrapeResult struct {
 	Success bool
@@ -30,28 +42,56 @@ func NewBrowserClient(cfg *Config) *BrowserClient {
 }
 
 func (b *BrowserClient) Scrape(ctx context.Context, targetURL, proxyURL string, headless bool) (*ScrapeResult, error) {
-	l := launcher.New().Headless(headless)
+	l := launcher.New().
+		Headless(headless).
+		// ponytail: rod sets "enable-automation" by default, which flips
+		// navigator.webdriver to true and shows the "controlled by automated
+		// software" infobar -- both are classic bot-detection tells.
+		Delete("enable-automation").
+		Set("disable-blink-features", "AutomationControlled")
 
+	var proxyUser, proxyPass string
 	if proxyURL != "" {
-		l = l.Proxy(proxyURL)
+		u, err := url.Parse(proxyURL)
+		if err == nil {
+			if u.User != nil {
+				proxyUser = u.User.Username()
+				proxyPass, _ = u.User.Password()
+			}
+			// ponytail: strip auth from --proxy-server; MustHandleAuth handles it via CDP
+			u.User = nil
+			l = l.Set("proxy-server", u.String())
+		} else {
+			l = l.Set("proxy-server", proxyURL)
+		}
 	}
 
-	url, err := l.Launch()
-	if err != nil {
-		return nil, fmt.Errorf("failed to launch browser: %w", err)
+	debugURL := l.MustLaunch()
+	browser := rod.New().ControlURL(debugURL).MustConnect()
+	defer browser.MustClose()
+
+	if proxyUser != "" {
+		// ponytail: MustHandleAuth returns a blocking wait func that must run
+		// as a goroutine, otherwise Chrome's Fetch.authRequired event is never
+		// answered and every proxied navigation hangs until it times out.
+		go browser.MustHandleAuth(proxyUser, proxyPass)()
 	}
 
-	browser := rod.New().ControlURL(url)
-	if err := browser.Connect(); err != nil {
-		return nil, fmt.Errorf("failed to connect to browser: %w", err)
-	}
-	defer browser.Close()
-
-	page, err := browser.Page(proto.TargetCreateTarget{URL: "about:blank"})
+	// ponytail: stealth.Page injects JS shims (navigator.webdriver, chrome
+	// runtime, plugins, permissions, etc.) that puppeteer-extra's stealth
+	// evasions use to hide the automated fingerprint from bot checks.
+	page, err := stealth.Page(browser)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create page: %w", err)
 	}
 	defer page.Close()
+
+	if err := page.SetUserAgent(&proto.NetworkSetUserAgentOverride{
+		UserAgent:      desktopUserAgent,
+		AcceptLanguage: "en-US,en;q=0.9",
+	}); err != nil {
+		return nil, fmt.Errorf("failed to set user agent: %w", err)
+	}
 
 	navCtx, navCancel := context.WithTimeout(ctx, b.navigationTimeout)
 	defer navCancel()
@@ -64,16 +104,61 @@ func (b *BrowserClient) Scrape(ctx context.Context, targetURL, proxyURL string, 
 		}, nil
 	}
 
-	if err := page.Context(navCtx).WaitLoad(); err != nil {
+	// ponytail: youtu.be short links 30x-redirect to youtube.com/watch; WaitLoad's
+	// polling eval can race that redirect and get "execution context was destroyed",
+	// which is transient. Retry a few times instead of failing the whole scrape.
+	var waitErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		waitErr = page.Context(navCtx).WaitLoad()
+		if waitErr == nil || !isContextDestroyedErr(waitErr) {
+			break
+		}
+	}
+	if waitErr != nil {
 		return &ScrapeResult{
 			Success: false,
 			Message: "page load failed",
-			Error:   err,
+			Error:   waitErr,
 		}, nil
+	}
+
+	if botResult := detectBotWall(page); botResult != nil {
+		return botResult, nil
 	}
 
 	result := b.clickPlay(page, ctx)
 	return result, nil
+}
+
+// ponytail: surfaces Google/YouTube's bot-check pages ("unusual traffic" /
+// "confirm you're not a bot") as a distinct, actionable result instead of
+// letting the caller misread it as a generic "play button not visible".
+// This is almost always caused by the proxy's exit IP being flagged --
+// most commonly because a *rotating* proxy hands out a different exit IP
+// per TCP connection, so one page load looks like many different sessions.
+func detectBotWall(page *rod.Page) *ScrapeResult {
+	res, err := page.Eval(`() => document.body ? document.body.innerText.slice(0, 500) : ""`)
+	if err != nil {
+		return nil
+	}
+
+	body := strings.ToLower(res.Value.String())
+	switch {
+	case strings.Contains(body, "unusual traffic"):
+		return &ScrapeResult{
+			Success: false,
+			Message: "blocked by Google bot-check (\"unusual traffic\"); likely caused by a rotating proxy assigning a different exit IP per connection -- use a sticky/dedicated proxy IP instead",
+			Error:   fmt.Errorf("bot check triggered"),
+		}
+	case strings.Contains(body, "not a bot") || strings.Contains(body, "confirm you're not a bot"):
+		return &ScrapeResult{
+			Success: false,
+			Message: "blocked by YouTube bot-check (\"sign in to confirm you're not a bot\"); likely caused by proxy IP reputation -- use a residential/sticky proxy instead of a rotating datacenter proxy",
+			Error:   fmt.Errorf("bot check triggered"),
+		}
+	}
+
+	return nil
 }
 
 func (b *BrowserClient) clickPlay(page *rod.Page, ctx context.Context) *ScrapeResult {
