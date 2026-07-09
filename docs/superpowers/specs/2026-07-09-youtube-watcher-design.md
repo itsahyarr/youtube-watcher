@@ -79,6 +79,9 @@ POST /api/v1/scrape/youtube/play?headless=false
 |---|---|---|
 | Missing/invalid JSON | 400 | `{"code":400,"status":"BAD_REQUEST","success":false,"errors":{"message":"..."}}` |
 | Non-YouTube URL | 400 | Same pattern |
+| Invalid proxy URL/format | 400 | `{"code":400,"status":"BAD_REQUEST","success":false,"errors":{"message":"invalid proxy: ..."}}` |
+| Proxy DNS unresolvable | 400 | Same pattern |
+| Proxy TCP unreachable (5s dial) | 400 | Same pattern |
 | Browser launch fail | 500 | `{"code":500,"status":"INTERNAL_SERVER_ERROR","success":false,"errors":{"message":"..."}}` |
 | Navigation timeout (30s) | 500 | Same |
 | Play button not found/click fail | 500 | Same |
@@ -97,12 +100,14 @@ POST /api/v1/scrape/youtube/play
   ├─ Parse JSON body + query param (headless)
   ├─ Validate URL (YouTube patterns)
   │     └─ fail → 400
+  ├─ Validate proxy (format, DNS resolve, TCP dial)
+  │     └─ fail → 400
   │
   ▼ service.go (context with 120s deadline)
   ├─ browser.go: launch Rod (headless=param, proxy=param if provided)
   ├─ browser.go: navigate to URL (30s timeout)
-  ├─ browser.go: click play button (15s timeout)
-  │     ├─ success → result="SUCCESS"
+  ├─ browser.go: click play button (button.ytp-large-play-button, visibility check)
+  │     ├─ success → wait 7-15s randomly for video to start
   │     └─ fail    → result="FAILED"
   │
   ▼ repository.go: InsertLog(ctx, log)
@@ -173,11 +178,23 @@ go.mongodb.org/mongo-driver
 github.com/joho/godotenv
 ```
 
+## Proxy Validation
+
+Proxies are validated BEFORE browser launch to fail fast:
+
+1. **Format**: scheme must be `http`, `https`, or `socks5`; host required
+2. **DNS resolve**: `net.LookupHost` — host must resolve to at least one address
+3. **TCP dial**: `net.DialTimeout` with 5s timeout — port must be reachable
+
+Invalid proxy → `400 BAD_REQUEST`. No browser launched.
+
 ## Browser Lifecycle
 
 Per-request model:
 - Launch browser → navigate → click → close (`defer close` for cleanup)
-- Proxy: if `proxy` in request body, pass to Rod launch options; else direct
+- Play button: selector `button.ytp-large-play-button`, visibility check before click
+- Post-click: random 7-15s wait for video engine to start playing
+- Proxy: validated (format/DNS/TCP) before launch; if valid, passed to `--proxy-server`
 - Headless: from query param, falls back to env `ROD_HEADLESS`
 - Overall timeout: 120s context — kills browser when deadline hits
 
