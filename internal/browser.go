@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -79,32 +80,49 @@ func (b *BrowserClient) clickPlay(page *rod.Page, ctx context.Context) *ScrapeRe
 	actionCtx, actionCancel := context.WithTimeout(ctx, b.actionTimeout)
 	defer actionCancel()
 
-	selectors := []string{
-		".ytp-large-play-button",
-		".ytp-play-button",
-		"button[aria-label*='Play']",
-		"video",
+	// ponytail: wait for play button to appear; YouTube lazy-loads the player
+	selector := "button.ytp-large-play-button"
+
+	el, err := page.Context(actionCtx).Element(selector)
+	if err != nil {
+		return &ScrapeResult{
+			Success: false,
+			Message: "play button not found",
+			Error:   fmt.Errorf("selector %q: %w", selector, err),
+		}
 	}
 
-	for _, sel := range selectors {
-		el, err := page.Context(actionCtx).Element(sel)
-		if err != nil {
-			continue
-		}
-
-		if err := el.Click(proto.InputMouseButtonLeft, 1); err != nil {
-			continue
-		}
-
+	visible, err := el.Visible()
+	if err != nil || !visible {
 		return &ScrapeResult{
-			Success: true,
-			Message: "YouTube video play button clicked successfully",
+			Success: false,
+			Message: "play button not visible",
+			Error:   fmt.Errorf("selector %q: visible=%v, err=%v", selector, visible, err),
+		}
+	}
+
+	if err := el.Click(proto.InputMouseButtonLeft, 1); err != nil {
+		return &ScrapeResult{
+			Success: false,
+			Message: "play button click failed",
+			Error:   err,
+		}
+	}
+
+	// ponytail: wait 7-15s randomly for video to start playing after click
+	delay := 7 + rand.Intn(9)
+	select {
+	case <-time.After(time.Duration(delay) * time.Second):
+	case <-ctx.Done():
+		return &ScrapeResult{
+			Success: false,
+			Message: "context cancelled while waiting for video",
+			Error:   ctx.Err(),
 		}
 	}
 
 	return &ScrapeResult{
-		Success: false,
-		Message: "play button not found",
-		Error:   fmt.Errorf("no play button found with any known selector"),
+		Success: true,
+		Message: fmt.Sprintf("YouTube video play button clicked successfully (waited %ds)", delay),
 	}
 }
