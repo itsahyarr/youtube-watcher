@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -44,7 +45,10 @@ func (r *Repository) InsertLog(ctx context.Context, log *ScrapeLog) (string, err
 		return "", err
 	}
 
-	id := result.InsertedID.(primitive.ObjectID)
+	id, ok := result.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return "", fmt.Errorf("unexpected inserted ID type: %T", result.InsertedID)
+	}
 	return id.Hex(), nil
 }
 

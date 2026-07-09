@@ -66,9 +66,16 @@ func (h *Handler) ScrapeYouTube(c *gin.Context) {
 		return
 	}
 
-	result := "SUCCESS"
 	if logEntry.Status != "SUCCESS" {
-		result = "FAILED"
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    500,
+			Status:  "INTERNAL_SERVER_ERROR",
+			Success: false,
+			Errors: map[string]interface{}{
+				"message": logEntry.Message,
+			},
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, SuccessResponse{
@@ -79,7 +86,7 @@ func (h *Handler) ScrapeYouTube(c *gin.Context) {
 			"logId":   logEntry.ID.Hex(),
 			"url":     logEntry.URL,
 			"action":  logEntry.Action,
-			"result":  result,
+			"result":  "SUCCESS",
 			"message": logEntry.Message,
 		},
 	})

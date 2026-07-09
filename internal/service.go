@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -19,10 +18,6 @@ func NewService(repo *Repository, browser *BrowserClient) *Service {
 }
 
 func (s *Service) ExecuteScrape(ctx context.Context, targetURL, proxyURL string, headless bool) (*ScrapeLog, error) {
-	if !IsValidYouTubeURL(targetURL) {
-		return nil, fmt.Errorf("invalid YouTube URL")
-	}
-
 	startedAt := time.Now()
 
 	logEntry := &ScrapeLog{
@@ -73,7 +68,12 @@ func (s *Service) ExecuteScrape(ctx context.Context, targetURL, proxyURL string,
 	}
 
 	if logID != "" {
-		logEntry.ID, _ = primitive.ObjectIDFromHex(logID)
+		id, parseErr := primitive.ObjectIDFromHex(logID)
+		if parseErr != nil {
+			log.Printf("ERROR: failed to parse log ID %q: %v", logID, parseErr)
+		} else {
+			logEntry.ID = id
+		}
 	}
 
 	if err != nil {

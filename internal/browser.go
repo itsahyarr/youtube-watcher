@@ -63,14 +63,20 @@ func (b *BrowserClient) Scrape(ctx context.Context, targetURL, proxyURL string, 
 		}, nil
 	}
 
-	page.WaitLoad()
+	if err := page.Context(navCtx).WaitLoad(); err != nil {
+		return &ScrapeResult{
+			Success: false,
+			Message: "page load failed",
+			Error:   err,
+		}, nil
+	}
 
-	result := b.clickPlay(page)
+	result := b.clickPlay(page, ctx)
 	return result, nil
 }
 
-func (b *BrowserClient) clickPlay(page *rod.Page) *ScrapeResult {
-	actionCtx, actionCancel := context.WithTimeout(context.Background(), b.actionTimeout)
+func (b *BrowserClient) clickPlay(page *rod.Page, ctx context.Context) *ScrapeResult {
+	actionCtx, actionCancel := context.WithTimeout(ctx, b.actionTimeout)
 	defer actionCancel()
 
 	selectors := []string{
