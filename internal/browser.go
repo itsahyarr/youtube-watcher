@@ -85,7 +85,11 @@ func (b *BrowserClient) Scrape(ctx context.Context, targetURL, proxyURL string, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create page: %w", err)
 	}
-	defer page.Close()
+	defer func() {
+		if closeErr := page.Close(); closeErr != nil {
+			fmt.Printf("WARN: failed to close page: %v\n", closeErr)
+		}
+	}()
 
 	if err := page.SetUserAgent(&proto.NetworkSetUserAgentOverride{
 		UserAgent:      desktopUserAgent,
