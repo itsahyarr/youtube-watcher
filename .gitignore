@@ -4,7 +4,8 @@
 .beads-credential-key
 
 # Binaries
-# api
+api
+!api/
 bin/
 *.exe
 *.test
