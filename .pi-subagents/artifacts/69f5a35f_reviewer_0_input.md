@@ -1,0 +1,60 @@
+# Task for reviewer
+
+Re-review Task 1. Read-only. Previous blocker: missing deps — should now be in go.mod.
+
+- Task brief: /Users/itsahyarr/Documents/App/Scripts/youtube-watcher/.superpowers/sdd/task-1-brief.md
+- Implementer report: /Users/itsahyarr/Documents/App/Scripts/youtube-watcher/.superpowers/sdd/task-1-report.md
+- Diff file: /Users/itsahyarr/Documents/App/Scripts/youtube-watcher/.superpowers/sdd/review-08a97a4..a9d632b.diff
+- Base: 08a97a4, Head: a9d632b
+
+Global constraints: JSON camelCase, BSON camelCase, DB/collection snake_case, URLs kebab-case, Go fields PascalCase. Check errors, tagged switch over if. Dependencies: gin, rod, mongo-driver, godotenv only.
+
+Begin directly with spec compliance verdict.
+
+## Acceptance Contract
+Acceptance level: attested
+Completion is not accepted from prose alone. End with a structured acceptance report.
+
+Criteria:
+- criterion-1: Return concrete findings with file paths and severity when applicable
+
+Required evidence: review-findings, residual-risks
+
+Finish with a fenced JSON block tagged `acceptance-report` in this shape:
+Use empty arrays when no items apply; array fields contain strings unless object entries are shown.
+```acceptance-report
+{
+  "criteriaSatisfied": [
+    {
+      "id": "criterion-1",
+      "status": "satisfied",
+      "evidence": "specific proof"
+    }
+  ],
+  "changedFiles": [
+    "src/file.ts"
+  ],
+  "testsAddedOrUpdated": [
+    "test/file.test.ts"
+  ],
+  "commandsRun": [
+    {
+      "command": "command",
+      "result": "passed",
+      "summary": "short result"
+    }
+  ],
+  "validationOutput": [
+    "validation output or concise summary"
+  ],
+  "residualRisks": [
+    "none"
+  ],
+  "noStagedFiles": true,
+  "diffSummary": "short description of the diff",
+  "reviewFindings": [
+    "blocker: file.ts:12 - issue found, or no blockers"
+  ],
+  "manualNotes": "anything else the parent should know"
+}
+```

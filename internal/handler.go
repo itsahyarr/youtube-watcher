@@ -1,0 +1,97 @@
+package internal
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type ScrapeRequest struct {
+	URL   string  `json:"url" binding:"required"`
+	Proxy *string `json:"proxy"`
+}
+
+type Handler struct {
+	cfg *Config
+	svc *Service
+}
+
+func NewHandler(cfg *Config, svc *Service) *Handler {
+	return &Handler{cfg: cfg, svc: svc}
+}
+
+func (h *Handler) ScrapeYouTube(c *gin.Context) {
+	var req ScrapeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    400,
+			Status:  "BAD_REQUEST",
+			Success: false,
+			Errors: map[string]interface{}{
+				"message": "url is required and must be a valid YouTube URL",
+			},
+		})
+		return
+	}
+
+	headless := parseHeadlessParam(c.Query("headless"), h.cfg.RodHeadless)
+
+	if !IsValidYouTubeURL(req.URL) {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Code:    400,
+			Status:  "BAD_REQUEST",
+			Success: false,
+			Errors: map[string]interface{}{
+				"message": "url is not a valid YouTube URL",
+			},
+		})
+		return
+	}
+
+	proxyURL := ""
+	if req.Proxy != nil {
+		proxyURL = *req.Proxy
+	}
+
+	logEntry, err := h.svc.ExecuteScrape(c.Request.Context(), req.URL, proxyURL, headless)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Code:    500,
+			Status:  "INTERNAL_SERVER_ERROR",
+			Success: false,
+			Errors: map[string]interface{}{
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	result := "SUCCESS"
+	if logEntry.Status != "SUCCESS" {
+		result = "FAILED"
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse{
+		Code:    200,
+		Status:  "OK",
+		Success: true,
+		Data: map[string]interface{}{
+			"logId":   logEntry.ID.Hex(),
+			"url":     logEntry.URL,
+			"action":  logEntry.Action,
+			"result":  result,
+			"message": logEntry.Message,
+		},
+	})
+}
+
+func parseHeadlessParam(param string, defaultVal bool) bool {
+	switch param {
+	case "true":
+		return true
+	case "false":
+		return false
+	default:
+		return defaultVal
+	}
+}
