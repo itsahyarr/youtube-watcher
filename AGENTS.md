@@ -14,6 +14,7 @@ This file is created and edited by human. AI Agent should ask the user if want t
 
 - Caveman governs prose/chat replies only — never let it touch code comments or docs
 - Ponytail governs code decisions (YAGNI ladder) — takes precedence in .go files
+- Use tools `rtk`, refer to `CLAUDE.md`. **always** use if possible. see **RTK (Rust Token Killer) - Token-Optimized Commands** section on `CLAUDE.md`
 
 ## Context7 usage flow
 
