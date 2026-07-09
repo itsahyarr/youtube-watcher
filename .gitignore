@@ -15,8 +15,12 @@ bin/
 .superpowers/
 tmp/
 
+# Local scratch/debug scripts (may contain hardcoded credentials)
+cmd/test/
+
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+
