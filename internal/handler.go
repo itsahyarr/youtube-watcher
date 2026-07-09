@@ -20,6 +20,19 @@ func NewHandler(cfg *Config, svc *Service) *Handler {
 	return &Handler{cfg: cfg, svc: svc}
 }
 
+// ScrapeYouTube godoc
+//
+//	@summary		Scrape a YouTube video
+//	@description	Opens a YouTube URL in a browser, clicks the play button, and logs the result to MongoDB.
+//	@tags			scrape
+//	@accept			json
+//	@produce		json
+//	@param			headless	query		bool			false	"Run browser in headless mode"
+//	@param			request		body		ScrapeRequest	true	"Scrape request body"
+//	@success		200			{object}	SuccessResponse
+//	@failure		400			{object}	ErrorResponse
+//	@failure		500			{object}	ErrorResponse
+//	@router			/api/v1/scrape/youtube/play [post]
 func (h *Handler) ScrapeYouTube(c *gin.Context) {
 	var req ScrapeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -82,12 +95,12 @@ func (h *Handler) ScrapeYouTube(c *gin.Context) {
 		Code:    200,
 		Status:  "OK",
 		Success: true,
-		Data: map[string]interface{}{
-			"logId":   logEntry.ID.Hex(),
-			"url":     logEntry.URL,
-			"action":  logEntry.Action,
-			"result":  "SUCCESS",
-			"message": logEntry.Message,
+		Data: ScrapeData{
+			LogID:   logEntry.ID.Hex(),
+			URL:     logEntry.URL,
+			Action:  logEntry.Action,
+			Result:  "SUCCESS",
+			Message: logEntry.Message,
 		},
 	})
 }

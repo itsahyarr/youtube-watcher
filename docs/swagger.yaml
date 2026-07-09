@@ -1,0 +1,107 @@
+basePath: /
+definitions:
+  internal.ErrorResponse:
+    properties:
+      code:
+        example: 400
+        type: integer
+      errors:
+        additionalProperties: true
+        type: object
+      status:
+        example: BAD_REQUEST
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  internal.ScrapeData:
+    properties:
+      action:
+        example: CLICK_PLAY
+        type: string
+      logId:
+        example: 64f000000000000000000000
+        type: string
+      message:
+        example: YouTube video play button clicked successfully
+        type: string
+      result:
+        example: SUCCESS
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=abc123
+        type: string
+    type: object
+  internal.ScrapeRequest:
+    properties:
+      proxy:
+        type: string
+      url:
+        type: string
+    required:
+    - url
+    type: object
+  internal.SuccessResponse:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data:
+        $ref: '#/definitions/internal.ScrapeData'
+      status:
+        example: OK
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: ahyaruddin07@gmail.com
+    name: Muhammad Ahyaruddin
+  description: YouTube scraping service that opens a YouTube URL in a browser, clicks
+    play, and logs to MongoDB.
+  title: YouTube Watcher API
+  version: "1.0"
+paths:
+  /api/v1/scrape/youtube/play:
+    post:
+      consumes:
+      - application/json
+      description: Opens a YouTube URL in a browser, clicks the play button, and logs
+        the result to MongoDB.
+      parameters:
+      - description: Run browser in headless mode
+        in: query
+        name: headless
+        type: boolean
+      - description: Scrape request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal.ScrapeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal.ErrorResponse'
+      summary: Scrape a YouTube video
+      tags:
+      - scrape
+schemes:
+- http
+- https
+swagger: "2.0"

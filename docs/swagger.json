@@ -1,0 +1,154 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "YouTube scraping service that opens a YouTube URL in a browser, clicks play, and logs to MongoDB.",
+        "title": "YouTube Watcher API",
+        "contact": {
+            "name": "Muhammad Ahyaruddin",
+            "email": "ahyaruddin07@gmail.com"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/scrape/youtube/play": {
+            "post": {
+                "description": "Opens a YouTube URL in a browser, clicks the play button, and logs the result to MongoDB.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "scrape"
+                ],
+                "summary": "Scrape a YouTube video",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Run browser in headless mode",
+                        "name": "headless",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Scrape request body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal.ScrapeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "internal.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "status": {
+                    "type": "string",
+                    "example": "BAD_REQUEST"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "internal.ScrapeData": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "CLICK_PLAY"
+                },
+                "logId": {
+                    "type": "string",
+                    "example": "64f000000000000000000000"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "YouTube video play button clicked successfully"
+                },
+                "result": {
+                    "type": "string",
+                    "example": "SUCCESS"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://www.youtube.com/watch?v=abc123"
+                }
+            }
+        },
+        "internal.ScrapeRequest": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "proxy": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {
+                    "$ref": "#/definitions/internal.ScrapeData"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "OK"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        }
+    }
+}

@@ -23,16 +23,24 @@ type ScrapeLog struct {
 	CreatedAt  time.Time          `bson:"createdAt" json:"createdAt"`
 }
 
+type ScrapeData struct {
+	LogID   string `json:"logId" example:"64f000000000000000000000"`
+	URL     string `json:"url" example:"https://www.youtube.com/watch?v=abc123"`
+	Action  string `json:"action" example:"CLICK_PLAY"`
+	Result  string `json:"result" example:"SUCCESS"`
+	Message string `json:"message" example:"YouTube video play button clicked successfully"`
+}
+
 type SuccessResponse struct {
-	Code    int         `json:"code"`
-	Status  string      `json:"status"`
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data"`
+	Code    int         `json:"code" example:"200"`
+	Status  string      `json:"status" example:"OK"`
+	Success bool        `json:"success" example:"true"`
+	Data    ScrapeData  `json:"data"`
 }
 
 type ErrorResponse struct {
-	Code    int                    `json:"code"`
-	Status  string                 `json:"status"`
-	Success bool                   `json:"success"`
+	Code    int                    `json:"code" example:"400"`
+	Status  string                 `json:"status" example:"BAD_REQUEST"`
+	Success bool                   `json:"success" example:"false"`
 	Errors  map[string]interface{} `json:"errors"`
 }
