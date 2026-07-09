@@ -13,6 +13,7 @@ bin/
 # Tool artifacts
 .pi-subagents/
 .superpowers/
+tmp/
 
 # IDE
 .idea/
