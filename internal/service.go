@@ -62,6 +62,10 @@ func (s *Service) ExecuteScrape(ctx context.Context, targetURL, proxyURL string,
 		}
 	}
 
+	if result != nil && result.ExitIP != "" {
+		logEntry.ExitIP = &result.ExitIP
+	}
+
 	logID, dbErr := s.repo.InsertLog(ctx, logEntry)
 	if dbErr != nil {
 		log.Printf("ERROR: failed to insert scrape log to MongoDB: %v", dbErr)

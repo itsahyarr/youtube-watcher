@@ -19,6 +19,7 @@ type ScrapeLog struct {
 	FinishedAt time.Time          `bson:"finishedAt" json:"finishedAt"`
 	DurationMs int64              `bson:"durationMs" json:"durationMs"`
 	ProxyUsed  *string            `bson:"proxyUsed,omitempty" json:"proxyUsed,omitempty"`
+	ExitIP     *string            `bson:"exitIp,omitempty" json:"exitIp,omitempty"`
 	Headless   bool               `bson:"headless" json:"headless"`
 	CreatedAt  time.Time          `bson:"createdAt" json:"createdAt"`
 }
@@ -32,10 +33,10 @@ type ScrapeData struct {
 }
 
 type SuccessResponse struct {
-	Code    int         `json:"code" example:"200"`
-	Status  string      `json:"status" example:"OK"`
-	Success bool        `json:"success" example:"true"`
-	Data    ScrapeData  `json:"data"`
+	Code    int        `json:"code" example:"200"`
+	Status  string     `json:"status" example:"OK"`
+	Success bool       `json:"success" example:"true"`
+	Data    ScrapeData `json:"data"`
 }
 
 type ErrorResponse struct {

@@ -27,6 +27,7 @@ type ScrapeResult struct {
 	Success bool
 	Message string
 	Error   error
+	ExitIP  string
 }
 
 type BrowserClient struct {
@@ -96,13 +97,30 @@ func (b *BrowserClient) Scrape(ctx context.Context, targetURL, proxyURL string, 
 	navCtx, navCancel := context.WithTimeout(ctx, b.navigationTimeout)
 	defer navCancel()
 
+	// ponytail: capture the real exit IP the proxy assigned for the actual
+	// document request, straight off CDP's Network.responseReceived event --
+	// no extra request needed, and (unlike a separate probe request) it's
+	// guaranteed to be the IP the target site actually saw, which matters
+	// since our proxy rotates the exit IP per connection.
+	var exitIP string
+	waitIP := page.Context(navCtx).EachEvent(func(e *proto.NetworkResponseReceived) bool {
+		if e.Type == proto.NetworkResourceTypeDocument && e.Response.RemoteIPAddress != "" {
+			exitIP = e.Response.RemoteIPAddress
+			return true
+		}
+		return false
+	})
+
 	if err := page.Context(navCtx).Navigate(targetURL); err != nil {
 		return &ScrapeResult{
 			Success: false,
 			Message: "page navigation failed",
 			Error:   err,
+			ExitIP:  exitIP,
 		}, nil
 	}
+
+	waitIP()
 
 	// ponytail: youtu.be short links 30x-redirect to youtube.com/watch; WaitLoad's
 	// polling eval can race that redirect and get "execution context was destroyed",
@@ -119,14 +137,17 @@ func (b *BrowserClient) Scrape(ctx context.Context, targetURL, proxyURL string, 
 			Success: false,
 			Message: "page load failed",
 			Error:   waitErr,
+			ExitIP:  exitIP,
 		}, nil
 	}
 
 	if botResult := detectBotWall(page); botResult != nil {
+		botResult.ExitIP = exitIP
 		return botResult, nil
 	}
 
 	result := b.clickPlay(page, ctx)
+	result.ExitIP = exitIP
 	return result, nil
 }
 
