@@ -219,8 +219,8 @@ func (b *BrowserClient) clickPlay(page *rod.Page, ctx context.Context) *ScrapeRe
 		}
 	}
 
-	// ponytail: wait 7-15s randomly for video to start playing after click
-	delay := 7 + rand.Intn(9)
+	// ponytail: wait 30-50s randomly for video to start playing after click
+	delay := 30 + rand.Intn(21)
 	select {
 	case <-time.After(time.Duration(delay) * time.Second):
 	case <-ctx.Done():
